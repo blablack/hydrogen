@@ -252,8 +252,8 @@ bool Sampler::__render_note( Note* pNote, unsigned nBufferSize, Song* pSong )
 
 	for (std::vector<InstrumentComponent*>::iterator it = pInstr->get_components()->begin() ; it !=pInstr->get_components()->end(); ++it) {
 		nReturnValues[nReturnValueIndex] = false;
-        InstrumentComponent *pCompo = *it;
-        DrumkitComponent* pMainCompo = pEngine->getSong()->get_component( pCompo->get_drumkit_componentID() );
+		InstrumentComponent *pCompo = *it;
+		DrumkitComponent* pMainCompo = pEngine->getSong()->get_component( pCompo->get_drumkit_componentID() );
 
 		if( pNote->get_specific_compo_id() != -1 && pNote->get_specific_compo_id() != pCompo->get_drumkit_componentID() )
 			continue;
@@ -397,27 +397,27 @@ bool Sampler::__render_note( Note* pNote, unsigned nBufferSize, Song* pSong )
 		}
 
 		if ( pSelectedLayer->SamplePosition >= pSample->get_frames() ) {
-            WARNINGLOG( "sample position out of bounds. The layer has been resized during note play?" );
+			WARNINGLOG( "sample position out of bounds. The layer has been resized during note play?" );
 			nReturnValues[nReturnValueIndex] = true;
-            continue;
-        }
+			continue;
+		}
 
-        int noteStartInFrames = ( int ) ( pNote->get_position() * audio_output->m_transport.m_nTickSize ) + pNote->get_humanize_delay();
+		int noteStartInFrames = ( int ) ( pNote->get_position() * audio_output->m_transport.m_nTickSize ) + pNote->get_humanize_delay();
 
-        int nInitialSilence = 0;
-        if ( noteStartInFrames > ( int ) nFramepos ) {	// scrivo silenzio prima dell'inizio della nota
-            nInitialSilence = noteStartInFrames - nFramepos;
-            int nFrames = nBufferSize - nInitialSilence;
-            if ( nFrames < 0 ) {
-                int noteStartInFramesNoHumanize = ( int )pNote->get_position() * audio_output->m_transport.m_nTickSize;
-                if ( noteStartInFramesNoHumanize > ( int )( nFramepos + nBufferSize ) ) {
-                    // this note is not valid. it's in the future...let's skip it....
-                    ERRORLOG( QString( "Note pos in the future?? Current frames: %1, note frame pos: %2" ).arg( nFramepos ).arg(noteStartInFramesNoHumanize ) );
+		int nInitialSilence = 0;
+		if ( noteStartInFrames > ( int ) nFramepos ) {	// scrivo silenzio prima dell'inizio della nota
+			nInitialSilence = noteStartInFrames - nFramepos;
+			int nFrames = nBufferSize - nInitialSilence;
+			if ( nFrames < 0 ) {
+				int noteStartInFramesNoHumanize = ( int )pNote->get_position() * audio_output->m_transport.m_nTickSize;
+				if ( noteStartInFramesNoHumanize > ( int )( nFramepos + nBufferSize ) ) {
+					// this note is not valid. it's in the future...let's skip it....
+					ERRORLOG( QString( "Note pos in the future?? Current frames: %1, note frame pos: %2" ).arg( nFramepos ).arg(noteStartInFramesNoHumanize ) );
 					//pNote->dumpInfo();
 					nReturnValues[nReturnValueIndex] = true;
-                    continue;
-                }
-                // delay note execution
+					continue;
+				}
+				// delay note execution
 				//INFOLOG( "Delaying note execution. noteStartInFrames: " + to_string( noteStartInFrames ) + ", nFramePos: " + to_string( nFramepos ) );
 				//return 0;
 				continue;
@@ -441,62 +441,64 @@ bool Sampler::__render_note( Note* pNote, unsigned nBufferSize, Song* pSong )
 			}
 
 		} else {	// Precompute some values...
-			cost_L = cost_L * pNote->get_velocity();	// note velocity
-            cost_L = cost_L * pNote->get_pan_l();		// note pan
-            cost_L = cost_L * fLayerGain;				// layer gain
-            cost_L = cost_L * pInstr->get_pan_l();		// instrument pan
-            cost_L = cost_L * pInstr->get_gain();		// instrument gain
+			if ( pInstr->get_apply_velocity() ) {
+				cost_L = cost_L * pNote->get_velocity();		// note velocity
+				cost_R = cost_R * pNote->get_velocity();		// note velocity
+			}
+			cost_L = cost_L * pNote->get_pan_l();		// note pan
+			cost_L = cost_L * fLayerGain;				// layer gain
+			cost_L = cost_L * pInstr->get_pan_l();		// instrument pan
+			cost_L = cost_L * pInstr->get_gain();		// instrument gain
 
-            cost_L = cost_L * pCompo->get_gain();       // Component gain
-            cost_L = cost_L * pMainCompo->get_volume(); // Component volument
+			cost_L = cost_L * pCompo->get_gain();       // Component gain
+			cost_L = cost_L * pMainCompo->get_volume(); // Component volument
 
-            cost_L = cost_L * pInstr->get_volume();		// instrument volume
-            if ( Preferences::get_instance()->m_nJackTrackOutputMode == 0 ) {
-                // Post-Fader
-                cost_track_L = cost_L * 2;
-            }
-            cost_L = cost_L * pSong->get_volume();	// song volume
-            cost_L = cost_L * 2; // max pan is 0.5
+			cost_L = cost_L * pInstr->get_volume();		// instrument volume
+			if ( Preferences::get_instance()->m_nJackTrackOutputMode == 0 ) {
+			// Post-Fader
+			cost_track_L = cost_L * 2;
+			}
+			cost_L = cost_L * pSong->get_volume();	// song volume
+			cost_L = cost_L * 2; // max pan is 0.5
 
-			cost_R = cost_R * pNote->get_velocity();	// note velocity
 			cost_R = cost_R * pNote->get_pan_r();		// note pan
-            cost_R = cost_R * fLayerGain;				// layer gain
-            cost_R = cost_R * pInstr->get_pan_r();		// instrument pan
-            cost_R = cost_R * pInstr->get_gain();		// instrument gain
+			cost_R = cost_R * fLayerGain;				// layer gain
+			cost_R = cost_R * pInstr->get_pan_r();		// instrument pan
+			cost_R = cost_R * pInstr->get_gain();		// instrument gain
 
-            cost_R = cost_R * pCompo->get_gain();       // Component gain
-            cost_R = cost_R * pMainCompo->get_volume(); // Component volument
+			cost_R = cost_R * pCompo->get_gain();       // Component gain
+			cost_R = cost_R * pMainCompo->get_volume(); // Component volument
 
-            cost_R = cost_R * pInstr->get_volume();		// instrument volume
-            if ( Preferences::get_instance()->m_nJackTrackOutputMode == 0 ) {
-            // Post-Fader
-                cost_track_R = cost_R * 2;
-            }
-            cost_R = cost_R * pSong->get_volume();	// song pan
-            cost_R = cost_R * 2; // max pan is 0.5
-        }
+			cost_R = cost_R * pInstr->get_volume();		// instrument volume
+			if ( Preferences::get_instance()->m_nJackTrackOutputMode == 0 ) {
+			// Post-Fader
+			cost_track_R = cost_R * 2;
+			}
+			cost_R = cost_R * pSong->get_volume();	// song pan
+			cost_R = cost_R * 2; // max pan is 0.5
+		}
 
-        // direct track outputs only use velocity
-        if ( Preferences::get_instance()->m_nJackTrackOutputMode == 1 ) {
-            cost_track_L = cost_track_L * pNote->get_velocity();
-            cost_track_L = cost_track_L * fLayerGain;
-            cost_track_R = cost_track_L;
-        }
+		// direct track outputs only use velocity
+		if ( Preferences::get_instance()->m_nJackTrackOutputMode == 1 ) {
+			cost_track_L = cost_track_L * pNote->get_velocity();
+			cost_track_L = cost_track_L * fLayerGain;
+			cost_track_R = cost_track_L;
+		}
 
-        // Se non devo fare resample (drumkit) posso evitare di utilizzare i float e gestire il tutto in
-        // maniera ottimizzata
-        //	constant^12 = 2, so constant = 2^(1/12) = 1.059463.
-        //	float nStep = 1.0;1.0594630943593
+		// Se non devo fare resample (drumkit) posso evitare di utilizzare i float e gestire il tutto in
+		// maniera ottimizzata
+		//	constant^12 = 2, so constant = 2^(1/12) = 1.059463.
+		//	float nStep = 1.0;1.0594630943593
 
-        float fTotalPitch = pNote->get_total_pitch() + fLayerPitch;
+		float fTotalPitch = pNote->get_total_pitch() + fLayerPitch;
 
-        //_INFOLOG( "total pitch: " + to_string( fTotalPitch ) );
+		//_INFOLOG( "total pitch: " + to_string( fTotalPitch ) );
 		if( ( int )pSelectedLayer->SamplePosition == 0 )
-        {
-            if( Hydrogen::get_instance()->getMidiOutput() != NULL ){
-                Hydrogen::get_instance()->getMidiOutput()->handleQueueNote( pNote );
-            }
-        }
+		{
+			if( Hydrogen::get_instance()->getMidiOutput() != NULL ){
+			Hydrogen::get_instance()->getMidiOutput()->handleQueueNote( pNote );
+			}
+		}
 
 		if ( fTotalPitch == 0.0 && pSample->get_sample_rate() == audio_output->getSampleRate() ) // NO RESAMPLE
 			nReturnValues[nReturnValueIndex] = __render_note_no_resample( pSample, pNote, pSelectedLayer, pCompo, pMainCompo, nBufferSize, nInitialSilence, cost_L, cost_R, cost_track_L, cost_track_R, pSong );
@@ -504,7 +506,7 @@ bool Sampler::__render_note( Note* pNote, unsigned nBufferSize, Song* pSong )
 			nReturnValues[nReturnValueIndex] = __render_note_resample( pSample, pNote, pSelectedLayer, pCompo, pMainCompo, nBufferSize, nInitialSilence, cost_L, cost_R, cost_track_L, cost_track_R, fLayerPitch, pSong );
 
 		nReturnValueIndex++;
-    }
+	}
 	for ( unsigned i = 0 ; i < pInstr->get_components()->size() ; i++ )
 		if ( !nReturnValues[i] ) return false;
 	return true;

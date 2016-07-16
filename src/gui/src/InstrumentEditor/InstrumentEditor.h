@@ -48,7 +48,7 @@ class LayerPreview;
 ///
 class InstrumentEditor : public QWidget, public H2Core::Object, public EventListener
 {
-    H2_OBJECT
+	H2_OBJECT
 	Q_OBJECT
 
 	public:
@@ -77,6 +77,7 @@ class InstrumentEditor : public QWidget, public H2Core::Object, public EventList
 
 		void muteGroupBtnClicked(Button *pRef);
 		void onIsStopNoteCheckBoxClicked( bool on );
+		void onIsApplyVelocityCheckBoxClicked( bool on);
 		void midiOutChannelBtnClicked(Button *pRef);
 		void midiOutNoteBtnClicked(Button *pRef);
 
@@ -117,6 +118,8 @@ class InstrumentEditor : public QWidget, public H2Core::Object, public EventList
 		LCDDisplay *m_pInstrumentGainLCD;
 		Rotary *m_pInstrumentGain;
 		QCheckBox *m_pIgnoreVelocity;
+
+		QCheckBox *m_pApplyVelocity;
 
 		// Instrument mute group
 		LCDDisplay *m_pMuteGroupLCD;
